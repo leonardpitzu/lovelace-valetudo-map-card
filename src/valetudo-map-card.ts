@@ -836,28 +836,69 @@ class ValetudoMapCard extends HTMLElement {
             const seg = document.createElement("div");
             seg.classList.add("vmc-segments");
 
-            const chips = document.createElement("div");
-            chips.classList.add("vmc-chip-row");
-            for (const segment of segments) {
-                const chip = document.createElement("button");
-                chip.type = "button";
-                chip.classList.add("vmc-chip");
-                if (this.selectedSegments.has(segment.id)) {
-                    chip.classList.add("vmc-chip-selected");
-                }
-                chip.textContent = segment.name;
-                chip.addEventListener("click", () => {
-                    if (this.selectedSegments.has(segment.id)) {
-                        this.selectedSegments.delete(segment.id);
-                        chip.classList.remove("vmc-chip-selected");
-                    } else {
-                        this.selectedSegments.add(segment.id);
-                        chip.classList.add("vmc-chip-selected");
-                    }
-                });
-                chips.appendChild(chip);
+            const identifierAvailable = Boolean(this.getMqttIdentifier());
+
+            // Room picker: a compact checkbox dropdown that scales to any number
+            // of rooms, instead of a wall of buttons.
+            const dropdown = document.createElement("div");
+            dropdown.classList.add("vmc-dropdown");
+
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.classList.add("vmc-dropdown-toggle");
+
+            const panel = document.createElement("div");
+            panel.classList.add("vmc-dropdown-panel");
+            panel.style.display = "none";
+
+            const cleanButton = document.createElement("paper-button");
+            const cleanIcon = document.createElement("ha-icon");
+            cleanIcon.icon = "mdi:play-box-multiple";
+            const cleanText = document.createElement("span");
+            cleanText.textContent = "Clean rooms";
+            cleanButton.appendChild(cleanIcon);
+            cleanButton.appendChild(cleanText);
+            cleanButton.style.display = "none";
+            if (!identifierAvailable) {
+                cleanButton.setAttribute("disabled", "true");
+                cleanButton.title = "Set mqtt_identifier in the card config to enable room cleaning";
             }
-            seg.appendChild(chips);
+
+            // Keep the toggle label and Clean-button visibility in sync with selection.
+            const refresh = () => {
+                const count = this.selectedSegments.size;
+                toggle.textContent = count > 0 ? `${count} room${count > 1 ? "s" : ""} selected \u25be` : "Select rooms \u25be";
+                cleanButton.style.display = count > 0 ? "" : "none";
+            };
+
+            toggle.addEventListener("click", () => {
+                panel.style.display = panel.style.display === "none" ? "" : "none";
+            });
+
+            for (const segment of segments) {
+                const item = document.createElement("label");
+                item.classList.add("vmc-dropdown-item");
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = this.selectedSegments.has(segment.id);
+                checkbox.addEventListener("change", () => {
+                    if (checkbox.checked) {
+                        this.selectedSegments.add(segment.id);
+                    } else {
+                        this.selectedSegments.delete(segment.id);
+                    }
+                    refresh();
+                });
+                const name = document.createElement("span");
+                name.textContent = segment.name;
+                item.appendChild(checkbox);
+                item.appendChild(name);
+                panel.appendChild(item);
+            }
+
+            dropdown.appendChild(toggle);
+            dropdown.appendChild(panel);
+            seg.appendChild(dropdown);
 
             const action = document.createElement("div");
             action.classList.add("vmc-seg-action");
@@ -885,20 +926,21 @@ class ValetudoMapCard extends HTMLElement {
             passesField.appendChild(passes);
             action.appendChild(passesField);
 
-            const cleanButton = document.createElement("paper-button");
-            const cleanIcon = document.createElement("ha-icon");
-            cleanIcon.icon = "mdi:play-box-multiple";
-            const cleanText = document.createElement("span");
-            cleanText.textContent = "Clean rooms";
-            cleanButton.appendChild(cleanIcon);
-            cleanButton.appendChild(cleanText);
-            if (this.getMqttIdentifier()) {
-                cleanButton.addEventListener("click", () => this.cleanSelectedSegments());
-            } else {
-                cleanButton.setAttribute("disabled", "true");
-                cleanButton.title = "Set mqtt_identifier in the card config to enable room cleaning";
+            if (identifierAvailable) {
+                cleanButton.addEventListener("click", () => {
+                    this.cleanSelectedSegments();
+                    // Reset the picker after dispatching the cleanup.
+                    this.selectedSegments.clear();
+                    panel.querySelectorAll("input[type=checkbox]").forEach((el) => {
+                        (el as HTMLInputElement).checked = false;
+                    });
+                    panel.style.display = "none";
+                    refresh();
+                });
             }
             action.appendChild(cleanButton);
+
+            refresh();
 
             seg.appendChild(action);
             wrap.appendChild(seg);
@@ -1394,25 +1436,39 @@ class ValetudoMapCard extends HTMLElement {
           flex-direction: column;
           gap: 8px;
         }
-        .vmc-chip-row {
+        .vmc-dropdown {
           display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          justify-content: center;
+          flex-direction: column;
+          align-items: center;
         }
-        .vmc-chip {
+        .vmc-dropdown-toggle {
           cursor: pointer;
-          border: 1px solid var(--divider-color);
-          border-radius: 16px;
-          padding: 4px 12px;
           font: inherit;
+          padding: 6px 12px;
+          border: 1px solid var(--divider-color);
+          border-radius: 4px;
           background: var(--card-background-color);
           color: var(--primary-text-color);
         }
-        .vmc-chip-selected {
-          background: var(--primary-color);
-          color: var(--text-primary-color, #fff);
-          border-color: var(--primary-color);
+        .vmc-dropdown-panel {
+          margin-top: 4px;
+          width: 100%;
+          max-width: 320px;
+          max-height: 40vh;
+          overflow-y: auto;
+          border: 1px solid var(--divider-color);
+          border-radius: 4px;
+          background: var(--card-background-color);
+        }
+        .vmc-dropdown-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 12px;
+          cursor: pointer;
+        }
+        .vmc-dropdown-item:hover {
+          background: var(--secondary-background-color);
         }
         .vmc-seg-action {
           display: flex;

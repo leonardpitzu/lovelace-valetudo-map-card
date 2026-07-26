@@ -159,7 +159,9 @@ nothing is hardcoded, so they follow you across house or robot changes:
   operation mode incl. *vacuum then mop*, carpet sensor mode, …) is auto-discovered
   and rendered as a dropdown wired to `select.select_option`.
 - **Per-room cleanup** — rooms are read live from `sensor.<vacuum>_map_segments`.
-  Tap rooms to select, pick the number of passes, then **Clean rooms**.
+  Pick rooms from the compact checkbox dropdown (scales to any number of rooms),
+  choose the number of passes, then **Clean rooms** (the button only appears once
+  at least one room is selected, and the selection clears after it runs).
 
 Room cleanup publishes the Valetudo-native payload
 (`{segment_ids, iterations, customOrder}`) to
