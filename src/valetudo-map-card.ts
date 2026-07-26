@@ -22,7 +22,8 @@ class ValetudoMapCard extends HTMLElement {
     
     drawingMap: boolean;
     drawingControls: boolean;
-    lastUpdatedControls: string;
+    lastControlsSignature: string;
+    controlStyleApplied: boolean;
     lastMapPoll: Date;
     isPollingMap: boolean;
     lastRobotState: string;
@@ -51,7 +52,8 @@ class ValetudoMapCard extends HTMLElement {
 
         this.drawingMap = false;
         this.drawingControls = false;
-        this.lastUpdatedControls = "";
+        this.lastControlsSignature = "";
+        this.controlStyleApplied = false;
         this.attachShadow({ mode: "open" });
         this.lastMapPoll = new Date(0);
         this.isPollingMap = false;
@@ -122,7 +124,24 @@ class ValetudoMapCard extends HTMLElement {
     }
 
     shouldDrawControls(state: HassEntity) {
-        return !this.drawingControls && this.lastUpdatedControls !== state.last_updated;
+        return !this.drawingControls && this.controlsSignature(state) !== this.lastControlsSignature;
+    }
+
+    // Fingerprint every entity the control panel renders (vacuum status/battery,
+    // each Valetudo select, and the segment list) so the panel redraws exactly
+    // when a shown value changes — reactive, but no more work than needed.
+    controlsSignature(state: HassEntity) {
+        const parts: string[] = [
+            state?.state ?? "",
+            String(state?.attributes?.battery_level ?? ""),
+            String(state?.attributes?.battery_icon ?? ""),
+        ];
+        for (const select of this.getSelectEntities()) {
+            parts.push(select.entity_id, select.state);
+        }
+        const segments = this._hass.states[`sensor.${this._config.vacuum}_map_segments`];
+        parts.push(String(segments?.last_updated ?? ""));
+        return parts.join("|");
     }
 
     calculateColor(container: Element, ...colors: (string | undefined)[]) {
@@ -1096,7 +1115,7 @@ class ValetudoMapCard extends HTMLElement {
         }
 
         // Done drawing controls
-        this.lastUpdatedControls = infoEntity.last_updated;
+        this.lastControlsSignature = this.controlsSignature(infoEntity);
         this.drawingControls = false;
     }
 
@@ -1193,12 +1212,13 @@ class ValetudoMapCard extends HTMLElement {
             }
         } else {
             this.clearContainer(this.mapContainer);
-            this.clearContainer(this.controlContainer);
 
             this.entityWarning1.textContent = `Entity not available: ${this.getMapEntityName(this._config.vacuum)}`;
             this.entityWarning1.style.display = "block";
-            this.entityWarning2.style.display = "none";
         }
+
+        // Controls are reactive and independent of the map poll cadence.
+        this.refreshControls();
     }
 
     async loadImageAndExtractMapData(url: string): Promise<RawMapData | null> {
@@ -1263,19 +1283,10 @@ class ValetudoMapCard extends HTMLElement {
 
 
     handleDrawing(hass: HomeAssistant, mapEntity: HassEntity, attributes: RawMapData) {
-        let infoEntity = this.getVacuumEntity(this._config.vacuum);
-
         let canDrawMap = false;
-        let canDrawControls = true;
 
         if (attributes.__class === "ValetudoMap") {
             canDrawMap = true;
-        }
-
-        if (!infoEntity || infoEntity["state"] === "unavailable" || !infoEntity.attributes) {
-            canDrawControls = false;
-            // Reset last-updated to redraw as soon as element becomes available
-            this.lastUpdatedControls = "";
         }
 
         // Remove the map
@@ -1287,18 +1298,6 @@ class ValetudoMapCard extends HTMLElement {
             this.entityWarning1.style.display = "block";
         } else {
             this.entityWarning1.style.display = "none";
-        }
-
-        if (!canDrawControls) {
-            // Remove the controls
-            this.controlContainer.style.display = "none";
-
-            // Show the warning
-            this.entityWarning2.textContent = `Entity not available: ${this.getVacuumEntityName(this._config.vacuum)}`;
-            this.entityWarning2.style.display = "block";
-        } else {
-            this.entityWarning2.style.display = "none";
-            this.controlContainer.style.display = "block";
         }
 
         if (canDrawMap) {
@@ -1386,10 +1385,28 @@ class ValetudoMapCard extends HTMLElement {
                 this.drawingMap = false;
             }
         }
+    }
 
-        // Draw status and controls
-        if (canDrawControls) {
-            // Set control container CSS
+    // Reactive control panel: runs on every hass update (not just on map polls), so
+    // the dropdowns and room list always reflect live state. Redraws only when a
+    // shown value actually changed (see controlsSignature), keeping it lightweight.
+    refreshControls() {
+        const infoEntity = this.getVacuumEntity(this._config.vacuum);
+
+        if (!infoEntity || infoEntity.state === "unavailable" || !infoEntity.attributes) {
+            this.controlContainer.style.display = "none";
+            this.entityWarning2.textContent = `Entity not available: ${this.getVacuumEntityName(this._config.vacuum)}`;
+            this.entityWarning2.style.display = "block";
+            // Force a redraw as soon as the entity becomes available again.
+            this.lastControlsSignature = "";
+            return;
+        }
+
+        this.controlContainer.style.display = "block";
+        this.entityWarning2.style.display = "none";
+
+        // Control container CSS is static; apply it once.
+        if (!this.controlStyleApplied) {
             this.controlContainerStyle.textContent = `
         .flex-box {
           display: flex;
@@ -1486,11 +1503,11 @@ class ValetudoMapCard extends HTMLElement {
           flex-wrap: wrap;
         }
       `;
+            this.controlStyleApplied = true;
+        }
 
-            let infoEntity = this.getVacuumEntity(this._config.vacuum);
-            if (this.shouldDrawControls(infoEntity)) {
-                this.drawControls(infoEntity);
-            }
+        if (this.shouldDrawControls(infoEntity)) {
+            this.drawControls(infoEntity);
         }
     }
 
