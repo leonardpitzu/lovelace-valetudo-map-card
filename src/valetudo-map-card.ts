@@ -1460,6 +1460,8 @@ class ValetudoMapCard extends HTMLElement {
           margin-bottom: 2px;
         }
         .vmc-select {
+          box-sizing: border-box;
+          height: 28px;
           background: var(--card-background-color);
           color: var(--primary-text-color);
           border: 1px solid var(--divider-color);
@@ -1477,6 +1479,10 @@ class ValetudoMapCard extends HTMLElement {
           align-items: flex-start;
         }
         .vmc-dropdown-toggle {
+          box-sizing: border-box;
+          height: 28px;
+          display: inline-flex;
+          align-items: center;
           cursor: pointer;
           font: inherit;
           padding: 4px 8px;
