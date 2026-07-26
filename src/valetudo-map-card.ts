@@ -893,7 +893,7 @@ class ValetudoMapCard extends HTMLElement {
             // Keep the toggle label and Clean-button visibility in sync with selection.
             const refresh = () => {
                 const count = this.selectedSegments.size;
-                toggle.textContent = count > 0 ? `${count} room${count > 1 ? "s" : ""} selected \u25be` : "Select rooms \u25be";
+                toggle.textContent = count > 0 ? `${count} selected \u25be` : "Room \u25be";
                 cleanButton.style.display = count > 0 ? "" : "none";
             };
 
@@ -926,9 +926,19 @@ class ValetudoMapCard extends HTMLElement {
             dropdown.appendChild(panel);
 
             // Row #2: rooms picker + passes (+ Clean button) share one row.
+            // Wrap the rooms dropdown in a captioned field so its label lines up
+            // with the other controls (Passes, etc.).
+            const roomsField = document.createElement("div");
+            roomsField.classList.add("vmc-field");
+            const roomsCaption = document.createElement("span");
+            roomsCaption.classList.add("vmc-caption");
+            roomsCaption.textContent = "Rooms";
+            roomsField.appendChild(roomsCaption);
+            roomsField.appendChild(dropdown);
+
             const action = document.createElement("div");
             action.classList.add("vmc-seg-action");
-            action.appendChild(dropdown);
+            action.appendChild(roomsField);
 
             const passesField = document.createElement("label");
             passesField.classList.add("vmc-field");
@@ -1464,7 +1474,7 @@ class ValetudoMapCard extends HTMLElement {
         .vmc-dropdown {
           display: flex;
           flex-direction: column;
-          align-items: center;
+          align-items: flex-start;
         }
         .vmc-dropdown-toggle {
           cursor: pointer;
