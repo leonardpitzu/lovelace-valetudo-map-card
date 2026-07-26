@@ -1,0 +1,58 @@
+# Dry-run dashboard for Izaura (vacuum.valetudo_gratefulyellowishwombat)
+# ---------------------------------------------------------------------
+# Purpose: test the updated Valetudo Map Card side-by-side with your current
+# heavy MQTT-camera + Xiaomi vacuum card setup.
+#
+# Load the built card as a dashboard resource first:
+#   Settings -> Dashboards -> (three dots) -> Resources -> Add resource
+#   URL: /local/valetudo-map-card.js      (copy dist/valetudo-map-card.js to /config/www/)
+#   Type: JavaScript Module
+# (or add it via HACS pointing at your fork once pushed)
+#
+# Then add this as a new (unencoded / YAML) view. Both columns render the same
+# robot so you can compare fidelity + responsiveness against the old cards.
+
+title: Izaura Dry-Run
+views:
+  - title: Map Compare
+    path: izaura-compare
+    type: sections
+    sections:
+      # --- NEW: updated Valetudo Map Card -------------------------------
+      - type: grid
+        cards:
+          - type: markdown
+            content: "### New — Valetudo Map Card (2026.07.0)"
+          - type: custom:valetudo-map-card
+            vacuum: valetudo_gratefulyellowishwombat
+            title: Izaura (new card)
+            # Live map + position + trace are on by default. The lines below
+            # just make the new 2026 features explicit for the dry-run.
+            show_segments: true
+            show_carpets: true
+            show_carpet_border: true
+            show_floor_material: true
+            # Optional tuning (defaults shown):
+            # carpet_opacity: 0.4
+            # floor_material_opacity: 0.35
+            # map_scale: 1.5
+            # rotate: 0
+          - type: entities
+            entities:
+              - entity: vacuum.valetudo_gratefulyellowishwombat
+
+      # --- OLD: your current heavy setup, for comparison ----------------
+      - type: grid
+        cards:
+          - type: markdown
+            content: "### Old — MQTT camera + Xiaomi vacuum card"
+          # Replace with your existing picture-glance/camera card so you can
+          # eyeball rendering quality and update latency next to the new card.
+          - type: picture-entity
+            entity: camera.valetudo_gratefulyellowishwombat_map_data
+            camera_view: auto
+            show_state: false
+            show_name: false
+          - type: entities
+            entities:
+              - entity: vacuum.valetudo_gratefulyellowishwombat

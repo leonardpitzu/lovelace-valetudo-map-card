@@ -45,20 +45,37 @@ export interface RawMapLayerMetaData {
     segmentId?: string;
     name?: string;
     active?: boolean;
+    material?: RawMapLayerMaterial;
 }
 
 export type RawMapLayerType = "floor" | "segment" | "wall"
+
+// Segment floor material, as reported/configured in Valetudo (>= 2026.01).
+export type RawMapLayerMaterial =
+    | "generic"
+    | "tile"
+    | "wood"
+    | "wood_horizontal"
+    | "wood_vertical"
+    | "carpet"
+    | "carpet_low"
+    | "carpet_high";
 
 export type RawMapEntityType =
     | "charger_location"
     | "robot_position"
     | "go_to_target"
+    | "obstacle"
     | "path"
     | "predicted_path"
     | "virtual_wall"
+    | "threshold"
+    | "curtain"
     | "no_go_area"
     | "no_mop_area"
-    | "active_zone";
+    | "active_zone"
+    | "carpet"
+    | "ramp";
 
 export interface RawMapDataMetaData {
     version: number;

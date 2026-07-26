@@ -48,6 +48,9 @@ export interface Configuration {
     show_predicted_path: boolean;
     show_goto_target: boolean;
     show_segments: boolean;
+    show_carpets: boolean;
+    show_carpet_border: boolean;
+    show_floor_material: boolean;
 
     // Info show settings
     show_status: boolean;
@@ -81,6 +84,8 @@ export interface Configuration {
     no_mop_area_opacity: number;
     virtual_wall_opacity: number;
     path_opacity: number;
+    carpet_opacity: number;
+    floor_material_opacity: number;
 
     // Color settings
     background_color: string;
@@ -94,6 +99,8 @@ export interface Configuration {
     dock_color: string;
     vacuum_color: string;
     goto_target_color: string;
+    carpet_color: string;
+    floor_material_color: string;
 
     // Color segment settings
     segment_colors: string[];

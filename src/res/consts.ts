@@ -23,6 +23,9 @@ export const DEFAULT_CARD_CONFIG = Object.freeze({
     show_predicted_path: true,
     show_goto_target: true,
     show_segments: true,
+    show_carpets: true,
+    show_carpet_border: true,
+    show_floor_material: true,
 
     // Info show settings
     show_status: true,
@@ -55,6 +58,8 @@ export const DEFAULT_CARD_CONFIG = Object.freeze({
     no_mop_area_opacity: 0.5,
     virtual_wall_opacity: 1,
     path_opacity: 1,
+    carpet_opacity: 0.4,
+    floor_material_opacity: 0.35,
 
     // Color segment settings
     segment_colors: [

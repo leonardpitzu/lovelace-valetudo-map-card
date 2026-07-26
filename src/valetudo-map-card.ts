@@ -250,6 +250,32 @@ class ValetudoMapCard extends HTMLElement {
         return this.getEntities(attributes, "no_mop_area");
     }
 
+    getCarpets(attributes: RawMapData) {
+        return this.getEntities(attributes, "carpet");
+    }
+
+    // Decides whether a given segment pixel should receive the material accent
+    // color, producing a lightweight texture without extra canvas layers.
+    // x/y are raw map-pixel coordinates, so the pattern is map-scale independent.
+    isFloorMaterialAccentPixel(material: string, x: number, y: number) {
+        switch (material) {
+            case "wood":
+            case "wood_horizontal":
+                return y % 4 === 0;
+            case "wood_vertical":
+                return x % 4 === 0;
+            case "tile":
+                return x % 6 === 0 || y % 6 === 0;
+            case "carpet":
+            case "carpet_low":
+                return (x + y) % 3 === 0;
+            case "carpet_high":
+                return (x + y) % 2 === 0;
+            default:
+                return false;
+        }
+    }
+
     drawMap(attributes: RawMapData, mapHeight: number, mapWidth: number, boundingBox: BoundingBox) {
         const pixelSize = attributes.pixelSize;
 
@@ -276,6 +302,8 @@ class ValetudoMapCard extends HTMLElement {
         const chargerColor = this.calculateColor(homeAssistant, this._config.dock_color, "green");
         const vacuumColor = this.calculateColor(homeAssistant, this._config.vacuum_color, "--primary-text-color");
         const gotoTargetColor = this.calculateColor(homeAssistant, this._config.goto_target_color, "blue");
+        const carpetColor = this.calculateColor(homeAssistant, this._config.carpet_color, "--valetudo-carpet-color", "--primary-color");
+        const floorMaterialColor = this.calculateColor(homeAssistant, this._config.floor_material_color, "--valetudo-floor-material-color", "rgba(0, 0, 0, 0.5)");
 
         // Create all objects
         const containerContainer = document.createElement("div");
@@ -393,10 +421,67 @@ class ValetudoMapCard extends HTMLElement {
                         }
                         mapCtx.fillRect(x, y, this._config.map_scale, this._config.map_scale);
                     }
+
+                    // Overlay a lightweight texture reflecting the segment's floor
+                    // material (wood/tile/carpet). Single extra pass, only when set.
+                    const material = this._config.show_floor_material ? item.metaData?.material : undefined;
+                    if (material && material !== "generic") {
+                        mapCtx.fillStyle = floorMaterialColor;
+                        mapCtx.globalAlpha = this._config.floor_material_opacity;
+                        for (let i = 0; i < segmentPoints.length; i+=2) {
+                            const px = segmentPoints[i];
+                            const py = segmentPoints[i + 1];
+                            if (!this.isFloorMaterialAccentPixel(material, px, py)) {
+                                continue;
+                            }
+                            let x = (px * this._config.map_scale) - mapLeftOffset;
+                            let y = (py * this._config.map_scale) - mapTopOffset;
+                            if (this.isOutsideBounds(x, y, drawnMapCanvas, this._config)) {
+                                continue;
+                            }
+                            mapCtx.fillRect(x, y, this._config.map_scale, this._config.map_scale);
+                        }
+                        mapCtx.globalAlpha = this._config.segment_opacity;
+                    }
                 }
             }
 
             mapCtx.globalAlpha = 1;
+        }
+
+        // Detected carpets (polygon entities, Valetudo >= 2025.12). Drawn above the
+        // floor/segments but below walls so physical geometry stays on top.
+        let carpets = this.getCarpets(attributes);
+        if (Array.isArray(carpets) && carpets.length > 0 && this._config.show_carpets) {
+            mapCtx.strokeStyle = carpetColor;
+            mapCtx.lineWidth = 2;
+            mapCtx.fillStyle = carpetColor;
+            for (let item of carpets) {
+                mapCtx.globalAlpha = this._config.carpet_opacity;
+                mapCtx.beginPath();
+                let points = item["points"];
+                for (let i = 0; i < points.length; i+=2) {
+                    let x = Math.floor(points[i] / widthScale) - objectLeftOffset - mapLeftOffset;
+                    let y = Math.floor(points[i + 1] / heightScale) - objectTopOffset - mapTopOffset;
+                    if (i === 0) {
+                        mapCtx.moveTo(x, y);
+                    } else {
+                        mapCtx.lineTo(x, y);
+                    }
+                    if (this.isOutsideBounds(x, y, drawnMapCanvas, this._config)) {
+                        // noinspection UnnecessaryContinueJS
+                        continue;
+                    }
+                }
+                mapCtx.fill();
+
+                if (this._config.show_carpet_border) {
+                    mapCtx.closePath();
+                    mapCtx.globalAlpha = 1.0;
+                    mapCtx.stroke();
+                }
+            }
+            mapCtx.globalAlpha = 1.0;
         }
 
         if (this._config.show_walls) {
