@@ -1479,7 +1479,7 @@ class ValetudoMapCard extends HTMLElement {
         .vmc-dropdown-toggle {
           cursor: pointer;
           font: inherit;
-          padding: 6px 12px;
+          padding: 4px 8px;
           border: 1px solid var(--divider-color);
           border-radius: 4px;
           background: var(--card-background-color);
