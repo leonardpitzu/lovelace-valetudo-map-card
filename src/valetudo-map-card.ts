@@ -11,7 +11,7 @@ import { BoundingBox, Configuration, CropConfig, HaIconElement, RobotInfo } from
 import { DEFAULT_CARD_CONFIG, POLL_INTERVAL_STATE_MAP } from "./res/consts";
 
 console.info(
-    `%c   Valetudo-Map-Card   \n%c   Version ${packageJson.version}   `,
+    `%c   Valetudo-Map-Card   \n%c   Version ${packageJson.version} (build __BUILD_SHA__)   `,
     "color: #0076FF; font-weight: bold; background: #121212",
     "color: #52AEFF; font-weight: bold; background: #1e1e1e"
 );
