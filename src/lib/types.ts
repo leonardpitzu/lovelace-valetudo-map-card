@@ -110,6 +110,12 @@ export interface Configuration {
     vacuum_icon: string;
     goto_target_icon: string;
 
+    // Under-map control menus (auto-derived from Valetudo's exposed entities)
+    show_controls_menu: boolean;
+    mqtt_topic_prefix: string;
+    mqtt_identifier: string;
+    max_passes: number;
+
     // Crop settings
     min_height: number | string;
     crop: CropConfig;

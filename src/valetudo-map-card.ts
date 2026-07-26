@@ -29,6 +29,9 @@ class ValetudoMapCard extends HTMLElement {
     pollInterval: number;
     lastValidRobotInfo: RobotInfo | null;
 
+    selectedSegments: Set<string>;
+    segmentPasses: number;
+
     cardContainer: HTMLElement;
     cardContainerStyle: HTMLStyleElement;
     cardHeader: HTMLDivElement;
@@ -54,6 +57,9 @@ class ValetudoMapCard extends HTMLElement {
         this.isPollingMap = false;
         this.lastRobotState = "docked";
         this.pollInterval = POLL_INTERVAL_STATE_MAP[this.lastRobotState];
+
+        this.selectedSegments = new Set();
+        this.segmentPasses = 1;
 
         this.cardContainer = document.createElement("ha-card");
         this.cardContainer.id = "valetudoMapCard";
@@ -707,6 +713,200 @@ class ValetudoMapCard extends HTMLElement {
         }
     }
 
+    // Turn "vacuum_then_mop" / "carpet_sensor_mode" into "Vacuum then mop" / "Carpet sensor mode"
+    prettifyLabel(value: string) {
+        return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    // Auto-discover every Valetudo select entity for this robot (fan, water, mode,
+    // carpet sensor mode, and anything future) — no hardcoding, adapts to the robot.
+    getSelectEntities() {
+        const prefix = `select.${this._config.vacuum}_`;
+        const result: { entity_id: string; state: string; options: string[]; label: string }[] = [];
+        for (const entity_id of Object.keys(this._hass.states)) {
+            if (!entity_id.startsWith(prefix)) {
+                continue;
+            }
+            const state = this._hass.states[entity_id];
+            const options = state?.attributes?.options;
+            if (!Array.isArray(options) || options.length === 0) {
+                continue;
+            }
+            result.push({
+                entity_id,
+                state: state.state,
+                options,
+                label: this.prettifyLabel(entity_id.slice(prefix.length)),
+            });
+        }
+        return result.sort((a, b) => a.entity_id.localeCompare(b.entity_id));
+    }
+
+    // Segments (rooms) as published live by Valetudo in sensor.<robot>_map_segments,
+    // where each numeric attribute key maps a segment id to its name.
+    getSegmentList() {
+        const state = this._hass.states[`sensor.${this._config.vacuum}_map_segments`];
+        const segments: { id: string; name: string }[] = [];
+        if (state && state.attributes) {
+            for (const key of Object.keys(state.attributes)) {
+                if (/^\d+$/.test(key)) {
+                    segments.push({ id: key, name: String(state.attributes[key]) });
+                }
+            }
+        }
+        return segments.sort((a, b) => Number(a.id) - Number(b.id));
+    }
+
+    // Resolve the Valetudo MQTT identifier (topic segment) from the device registry,
+    // so segment cleaning keeps working after swapping robots. Overridable via config.
+    getMqttIdentifier(): string | undefined {
+        if (this._config.mqtt_identifier) {
+            return this._config.mqtt_identifier;
+        }
+        const hass = this._hass as unknown as {
+            entities?: Record<string, { device_id?: string }>;
+            devices?: Record<string, { identifiers?: [string, string][] }>;
+        };
+        const deviceId = hass.entities?.[this.getVacuumEntityName(this._config.vacuum)]?.device_id;
+        const device = deviceId ? hass.devices?.[deviceId] : undefined;
+        const identifier = device?.identifiers?.find((tuple) => Array.isArray(tuple) && tuple[0] === "mqtt");
+        return identifier ? identifier[1] : undefined;
+    }
+
+    // Trigger segment cleanup with passes. Valetudo does not expose send_command, and
+    // HA's native clean_segments cannot pass iterations, so publish the authoritative
+    // REST-shaped payload straight to the MapSegmentationCapability topic.
+    cleanSelectedSegments() {
+        const ids = Array.from(this.selectedSegments);
+        const identifier = this.getMqttIdentifier();
+        if (ids.length === 0 || !identifier) {
+            return;
+        }
+        this._hass.callService("mqtt", "publish", {
+            topic: `${this._config.mqtt_topic_prefix}/${identifier}/MapSegmentationCapability/clean/set`,
+            payload: JSON.stringify({
+                segment_ids: ids,
+                iterations: this.segmentPasses,
+                customOrder: true,
+            }),
+        }).then();
+    }
+
+    // Build the under-map menu: auto-generated select dropdowns + room/passes cleanup.
+    drawExtraControls() {
+        const wrap = document.createElement("div");
+        wrap.classList.add("vmc-controls");
+
+        const selects = this.getSelectEntities();
+        if (selects.length > 0) {
+            const row = document.createElement("div");
+            row.classList.add("vmc-select-row");
+            for (const sel of selects) {
+                const field = document.createElement("label");
+                field.classList.add("vmc-field");
+                const caption = document.createElement("span");
+                caption.classList.add("vmc-caption");
+                caption.textContent = sel.label;
+                const dropdown = document.createElement("select");
+                dropdown.classList.add("vmc-select");
+                for (const option of sel.options) {
+                    const optionEl = document.createElement("option");
+                    optionEl.value = option;
+                    optionEl.textContent = this.prettifyLabel(option);
+                    if (option === sel.state) {
+                        optionEl.selected = true;
+                    }
+                    dropdown.appendChild(optionEl);
+                }
+                dropdown.addEventListener("change", () => {
+                    this._hass.callService("select", "select_option", {
+                        entity_id: sel.entity_id,
+                        option: dropdown.value,
+                    }).then();
+                });
+                field.appendChild(caption);
+                field.appendChild(dropdown);
+                row.appendChild(field);
+            }
+            wrap.appendChild(row);
+        }
+
+        const segments = this.getSegmentList();
+        if (segments.length > 0) {
+            const seg = document.createElement("div");
+            seg.classList.add("vmc-segments");
+
+            const chips = document.createElement("div");
+            chips.classList.add("vmc-chip-row");
+            for (const segment of segments) {
+                const chip = document.createElement("button");
+                chip.type = "button";
+                chip.classList.add("vmc-chip");
+                if (this.selectedSegments.has(segment.id)) {
+                    chip.classList.add("vmc-chip-selected");
+                }
+                chip.textContent = segment.name;
+                chip.addEventListener("click", () => {
+                    if (this.selectedSegments.has(segment.id)) {
+                        this.selectedSegments.delete(segment.id);
+                        chip.classList.remove("vmc-chip-selected");
+                    } else {
+                        this.selectedSegments.add(segment.id);
+                        chip.classList.add("vmc-chip-selected");
+                    }
+                });
+                chips.appendChild(chip);
+            }
+            seg.appendChild(chips);
+
+            const action = document.createElement("div");
+            action.classList.add("vmc-seg-action");
+
+            const passesField = document.createElement("label");
+            passesField.classList.add("vmc-field");
+            const passesCaption = document.createElement("span");
+            passesCaption.classList.add("vmc-caption");
+            passesCaption.textContent = "Passes";
+            const passes = document.createElement("select");
+            passes.classList.add("vmc-select");
+            for (let i = 1; i <= this._config.max_passes; i++) {
+                const optionEl = document.createElement("option");
+                optionEl.value = String(i);
+                optionEl.textContent = String(i);
+                if (i === this.segmentPasses) {
+                    optionEl.selected = true;
+                }
+                passes.appendChild(optionEl);
+            }
+            passes.addEventListener("change", () => {
+                this.segmentPasses = Number(passes.value) || 1;
+            });
+            passesField.appendChild(passesCaption);
+            passesField.appendChild(passes);
+            action.appendChild(passesField);
+
+            const cleanButton = document.createElement("paper-button");
+            const cleanIcon = document.createElement("ha-icon");
+            cleanIcon.icon = "mdi:play-box-multiple";
+            const cleanText = document.createElement("span");
+            cleanText.textContent = "Clean rooms";
+            cleanButton.appendChild(cleanIcon);
+            cleanButton.appendChild(cleanText);
+            if (this.getMqttIdentifier()) {
+                cleanButton.addEventListener("click", () => this.cleanSelectedSegments());
+            } else {
+                cleanButton.setAttribute("disabled", "true");
+                cleanButton.title = "Set mqtt_identifier in the card config to enable room cleaning";
+            }
+            action.appendChild(cleanButton);
+
+            seg.appendChild(action);
+            wrap.appendChild(seg);
+        }
+
+        return wrap;
+    }
+
     drawControls(infoEntity: HassEntity) {
     // Start drawing controls
         this.drawingControls = true;
@@ -841,6 +1041,9 @@ class ValetudoMapCard extends HTMLElement {
         this.controlContainer.append(this.infoBox);
         this.controlContainer.append(this.controlFlexBox);
         this.controlContainer.append(this.customControlFlexBox);
+        if (this._config.show_controls_menu) {
+            this.controlContainer.append(this.drawExtraControls());
+        }
 
         // Done drawing controls
         this.lastUpdatedControls = infoEntity.last_updated;
@@ -1150,9 +1353,72 @@ class ValetudoMapCard extends HTMLElement {
           align-items: center;
           padding: 8px;
         }
+        paper-button[disabled] {
+          opacity: 0.5;
+          cursor: default;
+        }
         ha-icon {
           width: 24px;
           height: 24px;
+        }
+        .vmc-controls {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 8px 8px 12px;
+        }
+        .vmc-select-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px 16px;
+          justify-content: space-evenly;
+        }
+        .vmc-field {
+          display: flex;
+          flex-direction: column;
+          font-size: 0.8em;
+        }
+        .vmc-caption {
+          opacity: 0.7;
+          margin-bottom: 2px;
+        }
+        .vmc-select {
+          background: var(--card-background-color);
+          color: var(--primary-text-color);
+          border: 1px solid var(--divider-color);
+          border-radius: 4px;
+          padding: 4px;
+        }
+        .vmc-segments {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .vmc-chip-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          justify-content: center;
+        }
+        .vmc-chip {
+          cursor: pointer;
+          border: 1px solid var(--divider-color);
+          border-radius: 16px;
+          padding: 4px 12px;
+          font: inherit;
+          background: var(--card-background-color);
+          color: var(--primary-text-color);
+        }
+        .vmc-chip-selected {
+          background: var(--primary-color);
+          color: var(--text-primary-color, #fff);
+          border-color: var(--primary-color);
+        }
+        .vmc-seg-action {
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          justify-content: center;
         }
       `;
 

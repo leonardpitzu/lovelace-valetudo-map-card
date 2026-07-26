@@ -27,6 +27,11 @@ export const DEFAULT_CARD_CONFIG = Object.freeze({
     show_carpet_border: true,
     show_floor_material: true,
 
+    // Under-map control menus (auto-derived from Valetudo entities)
+    show_controls_menu: true,
+    mqtt_topic_prefix: "valetudo",
+    max_passes: 3,
+
     // Info show settings
     show_status: true,
     show_battery_level: true,

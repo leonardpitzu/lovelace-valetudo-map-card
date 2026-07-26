@@ -111,6 +111,10 @@ Then use map_scale and crop to make it fit.
 | carpet_color                        | string  | '--valetudo-carpet-color', '--primary-color'                        | Detected carpet color                                                                                                                                                                                               
 | floor_material_opacity              | number  | 0.35                                                                | Opacity of the floor material texture overlay                                                                                                                                                                       
 | floor_material_color                | string  | '--valetudo-floor-material-color', 'rgba(0, 0, 0, 0.5)'             | Accent color used to draw the floor material texture                                                                                                                                                                
+| show_controls_menu                  | boolean | true                                                                | Show auto-generated control menus under the map (suction/water/mode selects + per-room cleanup)                                                                                                                     
+| mqtt_topic_prefix                   | string  | 'valetudo'                                                          | Valetudo MQTT topic prefix, used to publish room-cleanup commands                                                                                                                                                   
+| mqtt_identifier                     | string  | *(auto)*                                                            | Valetudo MQTT identifier; auto-derived from the device registry, override only if detection fails                                                                                                                   
+| max_passes                          | number  | 3                                                                   | Maximum selectable passes (iterations) for per-room cleanup                                                                                                                                                         
 | show_status                         | boolean | true                                                                | Show the status of vacuum_entity                                                                                                                                                                                    
 | show_battery_level                  | boolean | true                                                                | Show the battery level of vacuum_entity                                                                                                                                                                             
 | show_start_button                   | boolean | true                                                                | Show the start button for vacuum_entity                                                                                                                                                                             
@@ -144,6 +148,27 @@ Custom buttons can be added to this card when vacuum_entity is set. Each custom 
 | service_data | Object | {}                 | Optional service data that will be passed to the service 
 | icon         | string | mdi:radiobox-blank | The icon that will represent the custom button           
 | text         | string | ""                 | Optional text to display next to the icon                
+
+## Control menus
+
+When `show_controls_menu` is enabled (default), the card renders adaptive control
+menus **below the map**, built entirely from what Valetudo exposes for the robot —
+nothing is hardcoded, so they follow you across house or robot changes:
+
+- **Selects** — every `select.<vacuum>_*` entity (suction/fan, water/mop intensity,
+  operation mode incl. *vacuum then mop*, carpet sensor mode, …) is auto-discovered
+  and rendered as a dropdown wired to `select.select_option`.
+- **Per-room cleanup** — rooms are read live from `sensor.<vacuum>_map_segments`.
+  Tap rooms to select, pick the number of passes, then **Clean rooms**.
+
+Room cleanup publishes the Valetudo-native payload
+(`{segment_ids, iterations, customOrder}`) to
+`<mqtt_topic_prefix>/<mqtt_identifier>/MapSegmentationCapability/clean/set` via the
+`mqtt.publish` service — the only path that supports passes (HA's native
+`clean_segments` cannot). This requires the
+[MQTT integration](https://www.home-assistant.io/integrations/mqtt/). The
+identifier is auto-derived from the device registry; set `mqtt_identifier`
+manually only if that detection fails.
 
 ## License
 
