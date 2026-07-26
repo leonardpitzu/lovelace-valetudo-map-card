@@ -722,6 +722,12 @@ class ValetudoMapCard extends HTMLElement {
     // carpet sensor mode, and anything future) — no hardcoding, adapts to the robot.
     getSelectEntities() {
         const prefix = `select.${this._config.vacuum}_`;
+        // Friendlier labels for the standard Valetudo selects; unknown ones fall
+        // back to the auto-prettified entity suffix (keeps this adaptive).
+        const labelOverrides: Record<string, string> = {
+            fan: "Suction",
+            carpet_sensor_mode: "Carpet mode",
+        };
         const result: { entity_id: string; state: string; options: string[]; label: string }[] = [];
         for (const entity_id of Object.keys(this._hass.states)) {
             if (!entity_id.startsWith(prefix)) {
@@ -732,11 +738,12 @@ class ValetudoMapCard extends HTMLElement {
             if (!Array.isArray(options) || options.length === 0) {
                 continue;
             }
+            const suffix = entity_id.slice(prefix.length);
             result.push({
                 entity_id,
                 state: state.state,
                 options,
-                label: this.prettifyLabel(entity_id.slice(prefix.length)),
+                label: labelOverrides[suffix] ?? this.prettifyLabel(suffix),
             });
         }
         return result.sort((a, b) => a.entity_id.localeCompare(b.entity_id));
@@ -898,10 +905,11 @@ class ValetudoMapCard extends HTMLElement {
 
             dropdown.appendChild(toggle);
             dropdown.appendChild(panel);
-            seg.appendChild(dropdown);
 
+            // Row #2: rooms picker + passes (+ Clean button) share one row.
             const action = document.createElement("div");
             action.classList.add("vmc-seg-action");
+            action.appendChild(dropdown);
 
             const passesField = document.createElement("label");
             passesField.classList.add("vmc-field");
@@ -1472,9 +1480,10 @@ class ValetudoMapCard extends HTMLElement {
         }
         .vmc-seg-action {
           display: flex;
-          align-items: flex-end;
+          align-items: flex-start;
           gap: 12px;
           justify-content: center;
+          flex-wrap: wrap;
         }
       `;
 
