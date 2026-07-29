@@ -64,7 +64,7 @@ export const DEFAULT_CARD_CONFIG = Object.freeze({
     virtual_wall_opacity: 1,
     path_opacity: 1,
     carpet_opacity: 0.4,
-    floor_material_opacity: 0.35,
+    floor_material_opacity: 0.5,
 
     // Color segment settings
     segment_colors: [

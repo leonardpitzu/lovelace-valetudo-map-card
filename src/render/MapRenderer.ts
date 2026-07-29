@@ -69,19 +69,24 @@ function blendPixel(data: Uint8ClampedArray, idx: number, color: Rgba, opacity: 
  * Decides whether a given segment pixel should receive the material accent color,
  * producing a lightweight texture without extra canvas layers. Coordinates are raw
  * map pixels, so the pattern is map-scale independent.
+ *
+ * Patterns are deliberately wide (roughly half of the pixels are accented) rather
+ * than hairlines: browsers routinely composite the map from a downscaled raster
+ * while the dashboard is still loading, and a box filter reduces the pattern to its
+ * average tint. A hairline grid averages away to nothing, a broad one stays legible.
  */
 function isFloorMaterialAccentPixel(material: RawMapLayerMaterial, x: number, y: number): boolean {
     switch (material) {
         case "wood":
         case "wood_horizontal":
-            return y % 4 === 0;
+            return y % 4 < 2;
         case "wood_vertical":
-            return x % 4 === 0;
+            return x % 4 < 2;
         case "tile":
-            return x % 6 === 0 || y % 6 === 0;
+            return x % 6 < 2 || y % 6 < 2;
         case "carpet":
         case "carpet_low":
-            return (x + y) % 3 === 0;
+            return (x + y) % 4 < 2;
         case "carpet_high":
             return (x + y) % 2 === 0;
         default:
