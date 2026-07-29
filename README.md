@@ -157,6 +157,7 @@ Then use map_scale and crop to make it fit.
 | crop                                | Object  | {top: 0, bottom: 0, left: 0, right: 0}                              | Crop the map                                                                                                                                                                                                        
 | min_height                          | string  | 0                                                                   | The minimum height of the card the map is displayed in, regardless of the map's size itself. Suffix with 'w' if you want it to be times the width (ex: 0.5625w is equivalent to a picture card's 16x9 aspect_ratio) 
 | custom_buttons                      | array   | []                                                                  | An array of custom buttons. Options detailed below.                                                                                                                                                                 
+| debug                               | boolean | false                                                               | Log one line per static map render (canvas size, per-segment floor material, resolved accent colour) to the browser console                                                                                          
 
 Colors can be any valid CSS value in the card config, like name (red), hex code (#FF0000), rgb(255,255,255), rgba(255,255,255,0.8)...
 

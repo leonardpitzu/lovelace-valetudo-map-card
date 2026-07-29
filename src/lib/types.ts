@@ -120,5 +120,8 @@ export interface Configuration {
     min_height: number | string;
     crop: CropConfig;
 
+    /** Logs one console line per static map render. Opt-in, off by default. */
+    debug: boolean;
+
     custom_buttons: CustomButtonConfig[];
 }

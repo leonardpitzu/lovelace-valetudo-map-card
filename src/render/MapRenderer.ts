@@ -287,7 +287,20 @@ export class MapRenderer {
             const segments = getLayers(attributes, "segment");
             if (segments.length > 0) {
                 const colorFinder = new FourColorTheoremSolver(segments, 6);
-                const accentColor = parseColor(resolveCssColor(haRoot, config.floor_material_color, "--valetudo-floor-material-color", "rgba(0, 0, 0, 0.5)"));
+                const accentSource = resolveCssColor(haRoot, config.floor_material_color, "--valetudo-floor-material-color", "rgba(0, 0, 0, 0.5)");
+                const accentColor = parseColor(accentSource);
+
+                if (config.debug) {
+                    console.debug("valetudo-map-card: static render", {
+                        t: Math.round(performance.now()),
+                        canvas: `${this.mapCanvas.width}x${this.mapCanvas.height}`,
+                        show_floor_material: config.show_floor_material,
+                        materials: segments.map((segment) => segment.metaData.material ?? "none"),
+                        accent_source: accentSource,
+                        accent_rgba: accentColor,
+                        accent_opacity: config.floor_material_opacity
+                    });
+                }
 
                 for (const segment of segments) {
                     // The greedy solver is not strictly bounded to four colors, so wrap

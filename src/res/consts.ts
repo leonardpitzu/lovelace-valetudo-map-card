@@ -75,7 +75,9 @@ export const DEFAULT_CARD_CONFIG = Object.freeze({
     ],
 
     // Crop settings
-    min_height: 0
+    min_height: 0,
+
+    debug: false
 } satisfies Partial<Configuration>);
 
 export const POLL_INTERVAL_STATE_MAP: Record<string, number> = Object.freeze({
