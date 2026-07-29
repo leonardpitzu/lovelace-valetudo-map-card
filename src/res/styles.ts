@@ -114,6 +114,8 @@ ha-icon {
   z-index: 10;
 }
 .vmc-badge {
+  /* No backdrop-filter: it makes WebKit composite the map from a low-res raster
+     until the async blur lands, which hides the 1px floor-material stripes. */
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -126,9 +128,7 @@ ha-icon {
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--primary-text-color);
-  background: rgba(var(--rgb-card-background-color, 255, 255, 255), 0.72);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(var(--rgb-card-background-color, 255, 255, 255), 0.85);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .vmc-badge-battery {
@@ -166,8 +166,9 @@ export const MAP_CONTAINER_STYLE_TEMPLATE = (
   margin-right: auto;
   width: ${cardWidth}px;
   height: ${cardHeight}px;
-  transform: rotate(${rotate});
-  top: -${cropTop}px;
+${/* A no-op rotate(0deg) still promotes the map to its own composited layer, which
+      costs a full re-raster for nothing. Only emit the transform when it rotates. */
+    parseFloat(rotate) === 0 ? "" : `  transform: rotate(${rotate});\n`}  top: -${cropTop}px;
   left: -${cropLeft}px;
 }
 #lovelaceValetudoCard div {
