@@ -146,6 +146,7 @@ export class MapRenderer {
     private readonly mapCanvas: HTMLCanvasElement;
     private readonly pathCanvas: HTMLCanvasElement;
     private readonly bufferCanvas: HTMLCanvasElement;
+    private readonly bufferCtx: CanvasRenderingContext2D;
     private readonly chargerIcon: HaIconElement;
     private readonly vacuumIcon: HaIconElement;
     private readonly gotoIcon: HaIconElement;
@@ -162,6 +163,13 @@ export class MapRenderer {
         this.mapCanvas = document.createElement("canvas");
         this.pathCanvas = document.createElement("canvas");
         this.bufferCanvas = document.createElement("canvas");
+
+        // The staging canvas is only ever written through putImageData and read back
+        // by drawImage, so ask for a software surface up front. Without the hint some
+        // WebViews hand out a GPU surface whose very first blit is discarded, which
+        // silently drops the bottom-most pixel layer (floor + segments) while every
+        // later pass still lands.
+        this.bufferCtx = this.bufferCanvas.getContext("2d", { willReadFrequently: true })!;
 
         this.chargerIcon = document.createElement("ha-icon");
         this.vacuumIcon = document.createElement("ha-icon");
@@ -374,7 +382,7 @@ export class MapRenderer {
         if (!this.buffer || this.buffer.width !== width || this.buffer.height !== height) {
             this.bufferCanvas.width = width;
             this.bufferCanvas.height = height;
-            this.buffer = this.bufferCanvas.getContext("2d")!.createImageData(width, height);
+            this.buffer = this.bufferCtx.createImageData(width, height);
         } else {
             this.buffer.data.fill(0);
         }
@@ -383,11 +391,10 @@ export class MapRenderer {
     }
 
     private flushBuffer(ctx: CanvasRenderingContext2D, buffer: ImageData, width: number, height: number, scale: number): void {
-        const bufferCtx = this.bufferCanvas.getContext("2d")!;
-        bufferCtx.putImageData(buffer, 0, 0);
+        this.bufferCtx.putImageData(buffer, 0, 0);
 
         ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(this.bufferCanvas, 0, 0, width, height, 0, 0, width * scale, height * scale);
+        ctx.drawImage(this.bufferCanvas, 0, 0, width * scale, height * scale);
     }
 
     private writePixels(data: Uint8ClampedArray, width: number, height: number, pixels: number[], offsetX: number, offsetY: number, minX: number, minY: number, color: Rgba, opacity: number, material?: RawMapLayerMaterial, accentColor?: Rgba, accentOpacity = 0): void {
