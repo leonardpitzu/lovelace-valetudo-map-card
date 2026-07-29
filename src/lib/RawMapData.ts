@@ -1,6 +1,6 @@
 export interface RawMapData {
     __class?: string;
-    
+
     metaData: RawMapDataMetaData;
     size: {
         x: number;

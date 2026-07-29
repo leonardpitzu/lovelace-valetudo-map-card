@@ -70,9 +70,7 @@ export class FourColorTheoremSolver {
         };
 
 
-        const filteredLayers = layers.filter((layer) => {
-            return layer.type === "segment";
-        });
+        const filteredLayers = layers.filter((layer) => layer.type === "segment");
 
         if (filteredLayers.length <= 0) {
             return undefined;
@@ -143,9 +141,7 @@ export class FourColorTheoremSolver {
     }
 
     private buildGraph(mapData: {map: Array<Array<PossibleSegmentId>>, segmentIds: Array<SegmentId>, boundaries: Boundaries}) {
-        const vertices = mapData.segmentIds.map((i) => {
-            return new MapAreaVertex(i);
-        });
+        const vertices = mapData.segmentIds.map((i) => new MapAreaVertex(i));
 
         const graph = new MapAreaGraph(vertices);
 

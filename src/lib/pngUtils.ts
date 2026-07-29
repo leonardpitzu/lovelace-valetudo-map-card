@@ -4,10 +4,8 @@
  * See https://github.com/hughsk/png-chunks-extract/blob/d098d583f3ab3877c1e4613ec9353716f86e2eec/LICENSE.md for more information.
  */
 
-export function extractZtxtPngChunks (data: Uint8Array | Buffer) {
+export function extractZtxtPngChunks (data: Uint8Array) {
     // Used for fast-ish conversion between uint8s and uint32s/int32s.
-    // Also required in order to remain agnostic for both Node Buffers and
-    // Uint8Arrays.
     const uint8 = new Uint8Array(4);
     const uint32 = new Uint32Array(uint8.buffer);
 

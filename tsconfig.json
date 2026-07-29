@@ -1,9 +1,21 @@
 {
     "compilerOptions": {
-        "module": "es2020",
-        "moduleResolution": "node",
-        "target": "es5",
-        "resolveJsonModule": true,
-        "allowSyntheticDefaultImports": true
-    }
+        "target": "ES2020",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "lib": ["ES2020", "DOM", "DOM.Iterable"],
+        "rootDir": "src",
+        "outDir": "dist",
+        "strict": true,
+        "noImplicitOverride": true,
+        "noFallthroughCasesInSwitch": true,
+        "forceConsistentCasingInFileNames": true,
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "declaration": false,
+        "sourceMap": false
+    },
+    "include": ["src"]
 }

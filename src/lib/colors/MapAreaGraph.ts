@@ -34,9 +34,7 @@ export class MapAreaGraph {
      *
      */
     colorAllVertices() {
-        this.vertices.sort((l, r) => {
-            return r.adjacentVertexIds.size - l.adjacentVertexIds.size;
-        });
+        this.vertices.sort((l, r) => r.adjacentVertexIds.size - l.adjacentVertexIds.size);
 
         this.vertices.forEach((v) => {
             if (v.adjacentVertexIds.size <= 0) {
@@ -45,12 +43,8 @@ export class MapAreaGraph {
                 const adjacentVertices = this.getAdjacentVertices(v);
 
                 const existingColors = adjacentVertices
-                    .filter((vert) => {
-                        return vert.color !== undefined;
-                    })
-                    .map((vert) => {
-                        return vert.color;
-                    }) as Array<number>;
+                    .filter((vert) => vert.color !== undefined)
+                    .map((vert) => vert.color) as Array<number>;
 
                 v.color = this.lowestColor(existingColors);
             }
@@ -58,17 +52,11 @@ export class MapAreaGraph {
     }
 
     getAdjacentVertices(vertex: MapAreaVertex): Array<MapAreaVertex> {
-        return Array.from(vertex.adjacentVertexIds).map((id) => {
-            return this.getById(id);
-        }).filter(adjacentVertex => {
-            return adjacentVertex !== undefined;
-        }) as Array<MapAreaVertex>;
+        return Array.from(vertex.adjacentVertexIds).map((id) => this.getById(id)).filter(adjacentVertex => adjacentVertex !== undefined) as Array<MapAreaVertex>;
     }
 
     getById(id: string): MapAreaVertex | undefined {
-        return this.vertices.find((v) => {
-            return v.id === id;
-        });
+        return this.vertices.find((v) => v.id === id);
     }
 
     lowestColor(colors: Array<SegmentColorId>) {

@@ -1,21 +1,43 @@
 # Valetudo Map Card
 
-Display the map from a valetudo-enabled robot in a home assistant dashboard card.
+[![CI](https://github.com/leonardpitzu/lovelace-valetudo-map-card/actions/workflows/ci.yml/badge.svg)](https://github.com/leonardpitzu/lovelace-valetudo-map-card/actions/workflows/ci.yml)
+
+A [Home Assistant](https://www.home-assistant.io/) dashboard card that draws the
+live map of a [Valetudo](https://valetudo.cloud/)-enabled robot vacuum - floor,
+walls, segments, carpets, no-go areas, path and robot position - straight from the
+map the robot publishes over MQTT.  No cloud, no vendor app.
+
+A personal fork of [Hypfer/lovelace-valetudo-map-card](https://github.com/Hypfer/lovelace-valetudo-map-card),
+kept for my own house.  It is not in the HACS default store and no support is
+offered - fork it or install it by hand.  Anything that also reproduces upstream
+belongs upstream.
+
+## Features
+
+| Feature | Description |
+|---|---|
+| Full map rendering | Floor, walls, segments, charger, robot, path, predicted path, goto target |
+| Zones and restrictions | Currently cleaned zones, no-go areas, no-mop areas, virtual walls |
+| Carpet detection | Firmware-detected carpets drawn as their own layer (Valetudo >= 2025.12) |
+| Floor material texture | Per-segment wood/tile/carpet accent overlay (Valetudo >= 2026.01) |
+| Adaptive control menus | Suction, water, operation mode and carpet-sensor dropdowns discovered from the robot's own `select` entities - nothing hardcoded |
+| Status and battery badges | Floating over the map, upper left and upper right; battery falls back to `sensor.<vacuum>_battery_level` now that HA has dropped it from the vacuum entity |
+| Per-room cleanup | Rooms read live from `sensor.<vacuum>_map_segments`, with a pass count, published as Valetudo's native MQTT payload |
+| Single-blit renderer | Every pixel layer is composited into one `ImageData` at native map resolution and blitted once, instead of thousands of `fillRect` calls |
+| Cached static layers | Floor, segments, walls, carpets and zones are fingerprinted and redrawn only when the map actually changes - a poll otherwise repaints just path and icons |
+| Visibility gating | Polling stops when the card scrolls off-screen or the tab is hidden, and resumes immediately on return |
+| Overlay mode | Transparent background for stacking on `picture-elements`, with crop, rotate, scale and padding |
+| Custom buttons | Arbitrary service calls rendered as extra buttons |
 
 ## Installation
 
-It is highly recommended to use [HACS](https://hacs.xyz/) for managing custom extensions of Home Assistant.
+1. Copy `dist/valetudo-map-card.js` into your Home Assistant `config/www/` directory.
+2. Add it under **Settings** -> **Dashboards** -> **⋮** -> **Resources** as
+   `/local/valetudo-map-card.js`, type **JavaScript module**.
+3. Hard-refresh the browser - the old bundle is cached aggressively.
 
-Follow the HACS [installation instructions](https://hacs.xyz/docs/use/download/prerequisites/).
-
-It is necessary to "take control" over the dashboards before downloading the "Valetudo Map Card".
-1. Go to the Overview dashboard
-2. Click on the pencil-icon on the top right
-3. In the dialog click on the three dots on the top right
-4. In the context menu click on "take control"
-5. In the next dialog click on "take control" again
-   
-Then, open HACS, go to Frontend and click "Explore & Download Repositories" and search for "Valetudo Map Card". Select it and choose "Download".
+HACS works too, as a custom repository of type **Dashboard** pointing at this repo,
+but dashboards have to be under manual control first (**⋮** -> **Take control**).
 
 ## Configuration
 
@@ -115,8 +137,8 @@ Then use map_scale and crop to make it fit.
 | mqtt_topic_prefix                   | string  | 'valetudo'                                                          | Valetudo MQTT topic prefix, used to publish room-cleanup commands                                                                                                                                                   
 | mqtt_identifier                     | string  | *(auto)*                                                            | Valetudo MQTT identifier; auto-derived from the device registry, override only if detection fails                                                                                                                   
 | max_passes                          | number  | 3                                                                   | Maximum selectable passes (iterations) for per-room cleanup                                                                                                                                                         
-| show_status                         | boolean | true                                                                | Show the status of vacuum_entity                                                                                                                                                                                    
-| show_battery_level                  | boolean | true                                                                | Show the battery level of vacuum_entity                                                                                                                                                                             
+| show_status                         | boolean | true                                                                | Show the status badge in the upper left corner of the map                                                                                                                                                           
+| show_battery_level                  | boolean | true                                                                | Show the battery badge in the upper right corner of the map                                                                                                                                                         
 | show_start_button                   | boolean | true                                                                | Show the start button for vacuum_entity                                                                                                                                                                             
 | show_pause_button                   | boolean | true                                                                | Show the pause button for vacuum_entity                                                                                                                                                                             
 | show_stop_button                    | boolean | true                                                                | Show the stop button for vacuum_entity                                                                                                                                                                              
@@ -152,13 +174,13 @@ Custom buttons can be added to this card when vacuum_entity is set. Each custom 
 ## Control menus
 
 When `show_controls_menu` is enabled (default), the card renders adaptive control
-menus **below the map**, built entirely from what Valetudo exposes for the robot —
+menus **below the map**, built entirely from what Valetudo exposes for the robot -
 nothing is hardcoded, so they follow you across house or robot changes:
 
-- **Selects** — every `select.<vacuum>_*` entity (suction/fan, water/mop intensity,
-  operation mode incl. *vacuum then mop*, carpet sensor mode, …) is auto-discovered
+- **Selects** - every `select.<vacuum>_*` entity (suction/fan, water/mop intensity,
+  operation mode incl. *vacuum then mop*, carpet sensor mode, ...) is auto-discovered
   and rendered as a dropdown wired to `select.select_option`.
-- **Per-room cleanup** — rooms are read live from `sensor.<vacuum>_map_segments`.
+- **Per-room cleanup** - rooms are read live from `sensor.<vacuum>_map_segments`.
   Pick rooms from the compact checkbox dropdown (scales to any number of rooms),
   choose the number of passes, then **Clean rooms** (the button only appears once
   at least one room is selected, and the selection clears after it runs).
@@ -166,12 +188,27 @@ nothing is hardcoded, so they follow you across house or robot changes:
 Room cleanup publishes the Valetudo-native payload
 (`{segment_ids, iterations, customOrder}`) to
 `<mqtt_topic_prefix>/<mqtt_identifier>/MapSegmentationCapability/clean/set` via the
-`mqtt.publish` service — the only path that supports passes (HA's native
+`mqtt.publish` service - the only path that supports passes (HA's native
 `clean_segments` cannot). This requires the
 [MQTT integration](https://www.home-assistant.io/integrations/mqtt/). The
 identifier is auto-derived from the device registry; set `mqtt_identifier`
 manually only if that detection fails.
 
+## Development
+
+```bash
+npm install
+npm run lint        # ESLint, flat config
+npm run typecheck   # tsc --noEmit, strict
+npm run build       # rollup -> dist/valetudo-map-card.js
+```
+
+`dist/valetudo-map-card.js` is committed because it is the artifact HACS serves, so
+a source change only ships once the bundle is rebuilt and committed alongside it.
+The console banner carries the version, build timestamp and parent commit - a newer
+stamp after an update is what proves the fresh bundle loaded instead of a cached one.
+
 ## License
 
-Lovelace Valetudo Map Card is licensed under the MIT license.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+

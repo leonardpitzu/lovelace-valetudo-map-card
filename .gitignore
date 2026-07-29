@@ -1,7 +1,7 @@
 # Dependencies
 node_modules/
 
-# Build caches (dist/ is the HACS-distributed artifact — keep it tracked)
+# Build caches (dist/ is the HACS-distributed artifact - keep it tracked)
 .cache/
 *.tsbuildinfo
 
