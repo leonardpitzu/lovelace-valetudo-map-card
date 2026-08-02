@@ -1,6 +1,7 @@
 import type { HomeAssistant } from "custom-card-helpers";
 import type { HassEntity } from "home-assistant-js-websocket";
 
+import { prettifyLabel } from "../lib/text";
 import { Configuration } from "../lib/types";
 
 interface SelectEntity {
@@ -53,11 +54,6 @@ function shouldDisplayButton(buttonName: string, vacuumState: string): boolean {
         default:
             return buttonName === "start" || buttonName === "home";
     }
-}
-
-/** Turns "vacuum_then_mop" / "carpet_sensor_mode" into "Vacuum then mop" / "Carpet sensor mode". */
-function prettifyLabel(value: string): string {
-    return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function createButton(icon: string, text?: string): HTMLElement {

@@ -2,6 +2,7 @@ import type { HomeAssistant } from "custom-card-helpers";
 import type { HassEntity } from "home-assistant-js-websocket";
 
 import { Configuration, HaIconElement } from "../lib/types";
+import { MaintenanceAlerts } from "./MaintenanceAlerts";
 
 const STATE_ICONS: Record<string, string> = {
     cleaning: "mdi:robot-vacuum",
@@ -61,7 +62,8 @@ function createBadge(className: string): { element: HTMLDivElement; icon: HaIcon
 }
 
 /**
- * The two badges floating over the map: robot status top left, battery top right.
+ * The badges floating over the map: robot status top left, battery top right, and a
+ * maintenance chip per consumable or dock component that needs attention below them.
  *
  * Lives in the map container but outside the rotated map element, so `rotate` tilts
  * the floor plan without tilting the readouts. Patched in place like the control
@@ -72,21 +74,32 @@ export class StatusOverlay {
 
     private readonly status = createBadge("vmc-badge-status");
     private readonly battery = createBadge("vmc-badge-battery");
+    private readonly maintenance: MaintenanceAlerts;
 
     constructor(private readonly config: Configuration) {
         this.element = document.createElement("div");
         this.element.classList.add("vmc-overlay");
-        this.element.appendChild(this.status.element);
-        this.element.appendChild(this.battery.element);
+
+        const badges = document.createElement("div");
+        badges.classList.add("vmc-badge-row");
+        badges.appendChild(this.status.element);
+        badges.appendChild(this.battery.element);
+        this.element.appendChild(badges);
+
+        this.maintenance = new MaintenanceAlerts(config);
+        this.element.appendChild(this.maintenance.element);
     }
 
     hide(): void {
         this.status.element.style.display = "none";
         this.battery.element.style.display = "none";
+        this.maintenance.hide();
     }
 
     update(hass: HomeAssistant, vacuumEntity: HassEntity): void {
         const state = vacuumEntity.state;
+
+        this.maintenance.update(hass);
 
         if (this.config.show_status && state) {
             const label = hass.localize?.(`component.vacuum.entity_component._.state.${state}`);

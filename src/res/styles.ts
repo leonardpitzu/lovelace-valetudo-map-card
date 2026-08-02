@@ -106,12 +106,22 @@ ha-icon {
   right: 0;
   box-sizing: border-box;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 8px;
   padding: 8px;
   pointer-events: none;
   z-index: 10;
+}
+.vmc-badge-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.vmc-maintenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .vmc-badge {
   /* No backdrop-filter: it makes WebKit composite the map from a low-res raster
@@ -133,6 +143,29 @@ ha-icon {
 }
 .vmc-badge-battery {
   margin-left: auto;
+}
+.vmc-badge-maintenance {
+  max-width: none;
+  padding-right: 3px;
+  pointer-events: auto;
+}
+.vmc-badge-maintenance > ha-icon {
+  color: var(--warning-color, #ff9800);
+}
+.vmc-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 2px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+}
+.vmc-reset:hover {
+  background: var(--secondary-background-color);
 }
 .vmc-badge ha-icon {
   flex: none;

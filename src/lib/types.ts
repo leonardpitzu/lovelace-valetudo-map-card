@@ -56,6 +56,11 @@ export interface Configuration {
     show_status: boolean;
     show_battery_level: boolean;
 
+    /** Overlay a chip per consumable/dock component that needs attention. */
+    show_maintenance: boolean;
+    /** Minutes of remaining life at or below which a consumable is reported as due. */
+    maintenance_threshold: number;
+
     // Show button settings
     show_start_button: boolean;
     show_pause_button: boolean;

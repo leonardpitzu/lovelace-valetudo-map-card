@@ -139,6 +139,8 @@ Then use map_scale and crop to make it fit.
 | max_passes                          | number  | 3                                                                   | Maximum selectable passes (iterations) for per-room cleanup                                                                                                                                                         
 | show_status                         | boolean | true                                                                | Show the status badge in the upper left corner of the map                                                                                                                                                           
 | show_battery_level                  | boolean | true                                                                | Show the battery badge in the upper right corner of the map                                                                                                                                                         
+| show_maintenance                    | boolean | true                                                                | Overlay a chip on the map for every consumable that ran out or dock component that is no longer ok, each with its reset button                                                                                       
+| maintenance_threshold               | number  | 0                                                                   | Minutes of remaining life at or below which a consumable is reported as due                                                                                                                                         
 | show_start_button                   | boolean | true                                                                | Show the start button for vacuum_entity                                                                                                                                                                             
 | show_pause_button                   | boolean | true                                                                | Show the pause button for vacuum_entity                                                                                                                                                                             
 | show_stop_button                    | boolean | true                                                                | Show the stop button for vacuum_entity                                                                                                                                                                              
@@ -194,6 +196,25 @@ Room cleanup publishes the Valetudo-native payload
 [MQTT integration](https://www.home-assistant.io/integrations/mqtt/). The
 identifier is auto-derived from the device registry; set `mqtt_identifier`
 manually only if that detection fails.
+
+## Maintenance alerts
+
+With `show_maintenance` enabled (default), the card overlays a chip on the map for
+each maintenance action the robot is actually asking for - nothing is shown while
+everything is fine:
+
+- **Consumables** - every `button.<vacuum>_reset_<slug>_consumable` entity is paired
+  with its remaining-life sensor `sensor.<vacuum>_<slug>`. When that sensor drops to
+  `maintenance_threshold` minutes or below, a chip appears (*Change filter*, *Clean
+  sensors*, *Clean wheels*, ...) with a reset button that presses the matching reset
+  entity; the chip disappears as soon as the counter is back up.
+- **Dock components** - `sensor.<vacuum>_<slug>_dock_component` entities in any state
+  other than `ok` show an alert-only chip (*Change dust bag*, *Empty waste water*,
+  ...), since Valetudo exposes no reset for them.
+
+Both lists are discovered from the robot's own entities, so a vacuum with a different
+set of consumables works with no configuration. Slugs Valetudo does not currently
+ship fall back to the prettified entity suffix and a generic icon.
 
 ## Development
 
