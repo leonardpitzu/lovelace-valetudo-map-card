@@ -153,7 +153,7 @@ class ValetudoMapCard extends HTMLElement {
             segment_colors: Array.isArray(config.segment_colors) && config.segment_colors.length > 0
                 ? config.segment_colors
                 : DEFAULT_CARD_CONFIG.segment_colors
-        } as Configuration;
+        };
 
         if (typeof merged.vacuum === "string") {
             merged.vacuum = merged.vacuum.toLowerCase();
@@ -291,8 +291,11 @@ class ValetudoMapCard extends HTMLElement {
         }
 
         // Native TextDecoder instead of pako's own string conversion: it is faster
-        // and keeps the bundle free of pako's charset helpers.
-        return preprocessMap(JSON.parse(new TextDecoder().decode(inflate(chunks[0].data))));
+        // and keeps the bundle free of pako's charset helpers. The shape is asserted
+        // rather than validated here; draw() gates on `__class` before using it.
+        const parsed = JSON.parse(new TextDecoder().decode(inflate(chunks[0].data))) as RawMapData;
+
+        return preprocessMap(parsed);
     }
 
     private draw(config: Configuration, attributes: RawMapData | null): void {

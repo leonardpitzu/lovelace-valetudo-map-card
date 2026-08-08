@@ -72,16 +72,16 @@ export function extractZtxtPngChunks (data: Uint8Array) {
         }
 
         // Read the contents of the chunk out of the main buffer.
-        for (let i = 4; i < length; i++) {
-            chunk[i] = data[idx++];
-        }
+        chunk.set(data.subarray(idx, idx + length - 4), 4);
+        idx += length - 4;
 
         //Skip the CRC32
         idx += 4;
 
-        // The chunk data is now copied to remove the 4 preceding
-        // bytes used for the chunk name/type.
-        const chunkData = new Uint8Array(chunk.buffer.slice(4));
+        // A view, not a copy: it drops the 4 preceding bytes used for the chunk
+        // name/type. `chunk` is allocated fresh per iteration, so nothing else can
+        // mutate the bytes this aliases.
+        const chunkData = chunk.subarray(4);
 
         if (name === "zTXt") {
             let i = 0;
@@ -95,7 +95,7 @@ export function extractZtxtPngChunks (data: Uint8Array) {
 
             chunks.push({
                 keyword: keyword,
-                data: new Uint8Array(chunkData.slice(i + 2))
+                data: chunkData.subarray(i + 2)
             });
         }
     }

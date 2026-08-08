@@ -48,7 +48,7 @@ export interface RawMapLayerMetaData {
     material?: RawMapLayerMaterial;
 }
 
-export type RawMapLayerType = "floor" | "segment" | "wall"
+export type RawMapLayerType = "floor" | "segment" | "wall";
 
 // Segment floor material, as reported/configured in Valetudo (>= 2026.01).
 export type RawMapLayerMaterial =

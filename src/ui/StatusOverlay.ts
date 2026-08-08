@@ -36,7 +36,7 @@ function batteryIconFor(level: number, charging: boolean): string {
  * integration exposes.
  */
 function batteryLevelFor(hass: HomeAssistant, config: Configuration, vacuumEntity: HassEntity): number | undefined {
-    const fromAttribute = vacuumEntity.attributes?.battery_level;
+    const fromAttribute: unknown = vacuumEntity.attributes?.battery_level;
     if (typeof fromAttribute === "number" && Number.isFinite(fromAttribute)) {
         return fromAttribute;
     }
@@ -120,7 +120,10 @@ export class StatusOverlay {
         }
 
         const rounded = Math.round(level);
-        const icon = vacuumEntity.attributes?.battery_icon ?? batteryIconFor(rounded, state === "docked" && rounded < 100);
+        const attributeIcon: unknown = vacuumEntity.attributes?.battery_icon;
+        const icon = typeof attributeIcon === "string"
+            ? attributeIcon
+            : batteryIconFor(rounded, state === "docked" && rounded < 100);
 
         this.battery.icon.icon = icon;
         this.battery.text.textContent = `${rounded}%`;

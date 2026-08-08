@@ -1,7 +1,7 @@
 import type { HomeAssistant } from "custom-card-helpers";
 
 import { prettifyLabel } from "../lib/text";
-import { Configuration, HaIconElement } from "../lib/types";
+import { Configuration, entityIdSource, HaIconElement } from "../lib/types";
 
 interface Alert {
     key: string;
@@ -83,14 +83,11 @@ export class MaintenanceAlerts {
     }
 
     /**
-     * Resolves the maintenance entity ids once instead of on every state change.
-     * `hass.entities` (the entity registry) keeps a stable object identity across
-     * state updates, unlike `hass.states`, so the O(all entities) scan runs only when
-     * the registry itself changes.
+     * Resolves the maintenance entity ids once instead of on every state change, keyed
+     * on the identity of the entity registry.
      */
     private discover(hass: HomeAssistant): void {
-        const registry = (hass as unknown as { entities?: Record<string, unknown> }).entities;
-        const source: Record<string, unknown> = registry ?? hass.states;
+        const source = entityIdSource(hass);
 
         if (source === this.registrySource) {
             return;

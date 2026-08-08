@@ -196,14 +196,14 @@ export class FourColorTheoremSolver {
 type Pixel = {
     x: number,
     y: number
-}
+};
 
 type Boundaries = {
     minX: number,
     maxX: number,
     minY: number,
     maxY: number
-}
+};
 
 type PreparedLayers = {
     boundaries: Boundaries
@@ -212,11 +212,11 @@ type PreparedLayers = {
         name: string | undefined,
         pixels: Array<Pixel>
     }>
-}
+};
 
 type TraverseFunction = (
     x: number,
     y: number,
     currentSegmentId: PossibleSegmentId,
     pixelData: Array<Array<PossibleSegmentId>>
-) => PossibleSegmentId
+) => PossibleSegmentId;

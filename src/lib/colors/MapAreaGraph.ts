@@ -52,11 +52,11 @@ export class MapAreaGraph {
     }
 
     getAdjacentVertices(vertex: MapAreaVertex): Array<MapAreaVertex> {
-        return Array.from(vertex.adjacentVertexIds).map((id) => this.getById(id)).filter(adjacentVertex => adjacentVertex !== undefined) as Array<MapAreaVertex>;
+        return Array.from(vertex.adjacentVertexIds).flatMap((id) => this.vertexLookup.get(id) ?? []);
     }
 
     getById(id: string): MapAreaVertex | undefined {
-        return this.vertices.find((v) => v.id === id);
+        return this.vertexLookup.get(id);
     }
 
     lowestColor(colors: Array<SegmentColorId>) {

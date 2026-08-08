@@ -1,6 +1,17 @@
+import type { HomeAssistant } from "custom-card-helpers";
+
 export type HaIconElement = HTMLElement & { icon?: string };
 
 export type RobotInfo = [x: number, y: number, angle?: number];
+
+/**
+ * The entity registry keeps a stable object identity across state updates, unlike
+ * `hass.states`, so callers can use it to cache id scans. It is untyped in
+ * custom-card-helpers and absent on older cores, hence the widening and fallback.
+ */
+export function entityIdSource(hass: HomeAssistant): Record<string, unknown> {
+    return (hass as HomeAssistant & { entities?: Record<string, unknown> }).entities ?? hass.states;
+}
 
 export type BoundingBox = {
     minX: number;

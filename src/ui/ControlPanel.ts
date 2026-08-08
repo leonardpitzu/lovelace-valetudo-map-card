@@ -2,7 +2,7 @@ import type { HomeAssistant } from "custom-card-helpers";
 import type { HassEntity } from "home-assistant-js-websocket";
 
 import { prettifyLabel } from "../lib/text";
-import { Configuration } from "../lib/types";
+import { Configuration, entityIdSource } from "../lib/types";
 
 interface SelectEntity {
     entity_id: string;
@@ -284,14 +284,11 @@ export class ControlPanel {
     }
 
     /**
-     * Resolves the robot's `select.*` entity ids once instead of on every state
-     * change. `hass.entities` (the entity registry) keeps a stable object identity
-     * across state updates, unlike `hass.states`, so the O(all entities) scan runs
-     * only when the registry itself changes.
+     * Resolves the robot's `select.*` entity ids once instead of on every state change,
+     * keyed on the identity of the entity registry.
      */
     private selectEntityIds(hass: HomeAssistant): string[] {
-        const registry = (hass as unknown as { entities?: Record<string, unknown> }).entities;
-        const source: Record<string, unknown> = registry ?? hass.states;
+        const source = entityIdSource(hass);
 
         if (source !== this.selectSource) {
             this.selectSource = source;
@@ -309,9 +306,10 @@ export class ControlPanel {
 
         for (const entity_id of this.selectEntityIds(hass)) {
             const state = hass.states[entity_id];
-            const options = state?.attributes?.options;
+            const options: unknown = state?.attributes?.options;
 
-            if (!Array.isArray(options) || options.length === 0) {
+            if (!Array.isArray(options) || options.length === 0 ||
+                !options.every((option): option is string => typeof option === "string")) {
                 continue;
             }
 
