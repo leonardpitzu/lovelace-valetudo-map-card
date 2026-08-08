@@ -15,48 +15,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint (ESLint)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Check for errors
-        run: npm run lint
-
-  typecheck:
-    name: Typecheck (TypeScript)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "22"
-          cache: npm
-      - name: Install dependencies
-        run: npm ci
-      - name: Check types
-        run: npm run typecheck
-
   build:
-    name: Build (Rollup)
+    name: Lint, typecheck & build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: lts/*
+          check-latest: true
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Check for errors
+        run: npm run lint
+      - name: Check types
+        run: npm run typecheck
       - name: Build bundle
         run: npm run build
       # dist/ is the artifact HACS serves, so an empty or missing bundle has to
@@ -71,3 +46,13 @@ jobs:
           path: dist/valetudo-map-card.js
           if-no-files-found: error
           retention-days: 14
+
+  hacs:
+    name: Validate (HACS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hacs/action@main
+        with:
+          category: plugin
